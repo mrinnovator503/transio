@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { body, validationResult } = require('express-validator');
 
 // Helper function to handle database errors
 const handleDatabaseError = (err, res) => {
@@ -19,7 +18,7 @@ router.get('/', async (req, res) => {
         
         // Base query for all students
         let query = `
-            SELECT uid, first_name, last_name, email, enrollment_date 
+            SELECT uid, name, email, enrollment_date 
             FROM students
         `;
         
@@ -29,15 +28,14 @@ router.get('/', async (req, res) => {
         if (searchQuery) {
             query += `
                 WHERE 
-                    LOWER(first_name) LIKE LOWER($1) OR 
-                    LOWER(last_name) LIKE LOWER($1) OR 
+                    LOWER(name) LIKE LOWER($1) OR 
                     LOWER(email) LIKE LOWER($1)
             `;
             queryParams.push(`%${searchQuery}%`);
         }
         
         // Add ordering to keep results consistent
-        query += ' ORDER BY last_name, first_name';
+        query += ' ORDER BY name';
         
         // Execute the query using PostgreSQL's query method
         const result = await db.pool.query(query, queryParams);
@@ -53,83 +51,51 @@ router.get('/', async (req, res) => {
 });
 
 // Add new student
-router.post(
-    '/',
-    [
-        body('first_name').notEmpty().withMessage('First name is required'),
-        body('last_name').notEmpty().withMessage('Last name is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
-        body('enrollment_date').isISO8601().withMessage('Valid enrollment date is required')
-    ],
-    async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).render('error', { 
-                error: errors.array().map(err => err.msg).join(', ') 
-            });
-        }
-
-        const { first_name, last_name, email, enrollment_date } = req.body;
+router.post('/', async (req, res) => {
+    const { name, email, enrollment_date } = req.body;
+    
+    try {
+        const query = `
+            INSERT INTO students (name, email, enrollment_date)
+            VALUES ($1, $2, $3)
+            RETURNING *
+        `;
         
-        try {
-            const query = `
-                INSERT INTO students (first_name, last_name, email, enrollment_date)
-                VALUES ($1, $2, $3, $4)
-                RETURNING *
-            `;
-            
-            await db.pool.query(query, [first_name, last_name, email, enrollment_date]);
-            res.redirect('/');
-        } catch (err) {
-            handleDatabaseError(err, res);
-        }
+        await db.pool.query(query, [name, email, enrollment_date]);
+        res.redirect('/');
+    } catch (err) {
+        handleDatabaseError(err, res);
     }
-);
+});
 
 // Update student
-router.put(
-    '/:uid',
-    [
-        body('first_name').notEmpty().withMessage('First name is required'),
-        body('last_name').notEmpty().withMessage('Last name is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
-        body('enrollment_date').isISO8601().withMessage('Valid enrollment date is required')
-    ],
-    async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).render('error', { 
-                error: errors.array().map(err => err.msg).join(', ') 
+router.put('/:uid', async (req, res) => {
+    const { uid } = req.params;
+    const { name, email, enrollment_date } = req.body;
+    
+    try {
+        const query = `
+            UPDATE students 
+            SET name = $1, email = $2, enrollment_date = $3
+            WHERE uid = $4
+            RETURNING *
+        `;
+        
+        const result = await db.pool.query(query, [
+            name, email, enrollment_date, uid
+        ]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', { 
+                error: 'Student not found' 
             });
         }
-
-        const { uid } = req.params;
-        const { first_name, last_name, email, enrollment_date } = req.body;
         
-        try {
-            const query = `
-                UPDATE students 
-                SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4
-                WHERE uid = $5
-                RETURNING *
-            `;
-            
-            const result = await db.pool.query(query, [
-                first_name, last_name, email, enrollment_date, uid
-            ]);
-            
-            if (result.rows.length === 0) {
-                return res.status(404).render('error', { 
-                    error: 'Student not found' 
-                });
-            }
-            
-            res.redirect('/');
-        } catch (err) {
-            handleDatabaseError(err, res);
-        }
+        res.redirect('/');
+    } catch (err) {
+        handleDatabaseError(err, res);
     }
-);
+});
 
 // Delete student
 router.delete('/:uid', async (req, res) => {
