@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
         
         // Base query for all students
         let query = `
-            SELECT uid, name, email, enrollment_date 
+            SELECT uid, name, semester, branch, status 
             FROM students
         `;
         
@@ -28,8 +28,7 @@ router.get('/', async (req, res) => {
         if (searchQuery) {
             query += `
                 WHERE 
-                    LOWER(name) LIKE LOWER($1) OR 
-                    LOWER(email) LIKE LOWER($1)
+                    LOWER(name) LIKE LOWER($1)
             `;
             queryParams.push(`%${searchQuery}%`);
         }
@@ -52,16 +51,16 @@ router.get('/', async (req, res) => {
 
 // Add new student
 router.post('/', async (req, res) => {
-    const { name, email, enrollment_date } = req.body;
+    const { name, semester, branch, status } = req.body;
     
     try {
         const query = `
-            INSERT INTO students (name, email, enrollment_date)
-            VALUES ($1, $2, $3)
+            INSERT INTO students (name, semester, branch, status)
+            VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
         
-        await db.pool.query(query, [name, email, enrollment_date]);
+        await db.pool.query(query, [name, semester, branch, status]);
         res.redirect('/');
     } catch (err) {
         handleDatabaseError(err, res);
@@ -71,18 +70,18 @@ router.post('/', async (req, res) => {
 // Update student
 router.put('/:uid', async (req, res) => {
     const { uid } = req.params;
-    const { name, email, enrollment_date } = req.body;
+    const { name, semester, branch, status } = req.body;
     
     try {
         const query = `
             UPDATE students 
-            SET name = $1, email = $2, enrollment_date = $3
-            WHERE uid = $4
+            SET name = $1, semester = $2, branch = $3, status = $4
+            WHERE uid = $5
             RETURNING *
         `;
         
         const result = await db.pool.query(query, [
-            name, email, enrollment_date, uid
+            name, semester, branch, status, uid
         ]);
         
         if (result.rows.length === 0) {
