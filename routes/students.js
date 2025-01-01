@@ -103,7 +103,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     
     try {
-        const query = 'DELETE FROM students WHERE id = $1 RETURNING *';
+        const query = 'DELETE FROM students WHERE uid = $1 RETURNING *';
         const result = await db.pool.query(query, [id]);
         
         if (result.rows.length === 0) {
