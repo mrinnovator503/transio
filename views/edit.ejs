@@ -1,0 +1,51 @@
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-4xl font-bold mb-8 text-gray-800">Edit Student</h1>
+    
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <form action="/update/<%= student.uid %>" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Student ID</label>
+                <input type="text" value="<%= student.uid %>" disabled
+                    class="mt-1 px-4 py-2 w-full rounded-lg border border-gray-300 bg-gray-100">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" name="name" value="<%= student.name %>" required
+                    class="mt-1 px-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Semester</label>
+                <input type="number" name="semester" value="<%= student.semester %>" required
+                    class="mt-1 px-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Branch</label>
+                <input type="text" name="branch" value="<%= student.branch %>" required
+                    class="mt-1 px-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                <select name="status" required
+                    class="mt-1 px-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="active" <%= student.status === 'active' ? 'selected' : '' %>>Active</option>
+                    <option value="inactive" <%= student.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-4">
+                <button type="submit" 
+                    class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    Update Student
+                </button>
+                <a href="/" 
+                    class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
