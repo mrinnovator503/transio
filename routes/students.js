@@ -74,4 +74,5 @@ router.get('/delete/:uid', (req, res) => {
   });
 });
 
+console.log('Exporting studentRoutes router type:', typeof router);
 module.exports = router;
