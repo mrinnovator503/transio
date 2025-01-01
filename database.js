@@ -15,7 +15,10 @@ async function initDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS students (
         uid TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        enrollment_date DATE,
         semester INTEGER,
         branch TEXT,
         status TEXT CHECK(status IN ('active', 'inactive'))
@@ -26,9 +29,9 @@ async function initDatabase() {
     const result = await pool.query('SELECT COUNT(*) as count FROM students');
     if (result.rows[0].count === '0') {
       await pool.query(`
-        INSERT INTO students (uid, name, semester, branch, status) 
-        VALUES ($1, $2, $3, $4, $5)
-      `, ['12345', 'Test Student', 1, 'Computer Science', 'active']);
+        INSERT INTO students (uid, first_name, last_name, email, enrollment_date, semester, branch, status) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, ['12345', 'Test', 'Student', 'test.student@example.com', '2022-01-01', 1, 'Computer Science', 'active']);
     }
 
     console.log('Database initialized successfully');
@@ -47,10 +50,10 @@ async function getStudentByUid(uid) {
 // Add new student
 async function addStudent(student) {
   const result = await pool.query(`
-    INSERT INTO students (uid, name, semester, branch, status)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO students (uid, first_name, last_name, email, enrollment_date, semester, branch, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
-  `, [student.uid, student.name, student.semester, student.branch, student.status || 'active']);
+  `, [student.uid, student.first_name, student.last_name, student.email, student.enrollment_date, student.semester, student.branch, student.status || 'active']);
   return result.rows[0];
 }
 
@@ -64,10 +67,10 @@ async function getAllStudents() {
 async function updateStudent(uid, student) {
   const result = await pool.query(`
     UPDATE students 
-    SET name = $2, semester = $3, branch = $4, status = $5
+    SET first_name = $2, last_name = $3, email = $4, enrollment_date = $5, semester = $6, branch = $7, status = $8
     WHERE uid = $1
     RETURNING *
-  `, [uid, student.name, student.semester, student.branch, student.status]);
+  `, [uid, student.first_name, student.last_name, student.email, student.enrollment_date, student.semester, student.branch, student.status]);
   return result.rows[0];
 }
 
