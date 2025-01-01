@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const { body, validationResult } = require('express-validator');
 
 // Helper function to handle database errors
 const handleDatabaseError = (err, res) => {
@@ -52,51 +53,83 @@ router.get('/', async (req, res) => {
 });
 
 // Add new student
-router.post('/', async (req, res) => {
-    const { first_name, last_name, email, enrollment_date } = req.body;
-    
-    try {
-        const query = `
-            INSERT INTO students (first_name, last_name, email, enrollment_date)
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-        `;
-        
-        await db.pool.query(query, [first_name, last_name, email, enrollment_date]);
-        res.redirect('/');
-    } catch (err) {
-        handleDatabaseError(err, res);
-    }
-});
-
-// Update student
-router.put('/:uid', async (req, res) => {
-    const { uid } = req.params;
-    const { first_name, last_name, email, enrollment_date } = req.body;
-    
-    try {
-        const query = `
-            UPDATE students 
-            SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4
-            WHERE uid = $5
-            RETURNING *
-        `;
-        
-        const result = await db.pool.query(query, [
-            first_name, last_name, email, enrollment_date, uid
-        ]);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).render('error', { 
-                error: 'Student not found' 
+router.post(
+    '/',
+    [
+        body('first_name').notEmpty().withMessage('First name is required'),
+        body('last_name').notEmpty().withMessage('Last name is required'),
+        body('email').isEmail().withMessage('Valid email is required'),
+        body('enrollment_date').isISO8601().withMessage('Valid enrollment date is required')
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).render('error', { 
+                error: errors.array().map(err => err.msg).join(', ') 
             });
         }
+
+        const { first_name, last_name, email, enrollment_date } = req.body;
         
-        res.redirect('/');
-    } catch (err) {
-        handleDatabaseError(err, res);
+        try {
+            const query = `
+                INSERT INTO students (first_name, last_name, email, enrollment_date)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+            `;
+            
+            await db.pool.query(query, [first_name, last_name, email, enrollment_date]);
+            res.redirect('/');
+        } catch (err) {
+            handleDatabaseError(err, res);
+        }
     }
-});
+);
+
+// Update student
+router.put(
+    '/:uid',
+    [
+        body('first_name').notEmpty().withMessage('First name is required'),
+        body('last_name').notEmpty().withMessage('Last name is required'),
+        body('email').isEmail().withMessage('Valid email is required'),
+        body('enrollment_date').isISO8601().withMessage('Valid enrollment date is required')
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).render('error', { 
+                error: errors.array().map(err => err.msg).join(', ') 
+            });
+        }
+
+        const { uid } = req.params;
+        const { first_name, last_name, email, enrollment_date } = req.body;
+        
+        try {
+            const query = `
+                UPDATE students 
+                SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4
+                WHERE uid = $5
+                RETURNING *
+            `;
+            
+            const result = await db.pool.query(query, [
+                first_name, last_name, email, enrollment_date, uid
+            ]);
+            
+            if (result.rows.length === 0) {
+                return res.status(404).render('error', { 
+                    error: 'Student not found' 
+                });
+            }
+            
+            res.redirect('/');
+        } catch (err) {
+            handleDatabaseError(err, res);
+        }
+    }
+);
 
 // Delete student
 router.delete('/:uid', async (req, res) => {
