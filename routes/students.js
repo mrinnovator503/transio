@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
 });
 
 // Add new student
-router.post('/', async (req, res) => {
+router.post('/add', async (req, res) => {
     const { name, semester, branch, status } = req.body;
     
     try {
