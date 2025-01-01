@@ -1,96 +1,121 @@
-// routes/students.js
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
-// Home page - list all students
-router.get('/', async (req, res) => {
-  try {
-    const result = await db.pool.query('SELECT * FROM students ORDER BY uid');
-    res.render('index', { students: result.rows });
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
-});
+// Helper function to handle database errors
+const handleDatabaseError = (err, res) => {
+    console.error('Database error:', err);
+    return res.render('error', { 
+        error: 'Sorry, there was a problem accessing the database. Please try again later.' 
+    });
+};
 
-// Display add student form
-router.get('/add', (req, res) => {
-  res.render('add');
+// Main route that handles both initial page load and search
+router.get('/', async (req, res) => {
+    try {
+        // Get the search query from request, defaulting to empty string
+        const searchQuery = req.query.search || '';
+        
+        // Base query for all students
+        let query = `
+            SELECT id, first_name, last_name, email, enrollment_date 
+            FROM students
+        `;
+        
+        let queryParams = [];
+        
+        // If there's a search term, modify the query to include WHERE clause
+        if (searchQuery) {
+            query += `
+                WHERE 
+                    LOWER(first_name) LIKE LOWER($1) OR 
+                    LOWER(last_name) LIKE LOWER($1) OR 
+                    LOWER(email) LIKE LOWER($1)
+            `;
+            queryParams.push(`%${searchQuery}%`);
+        }
+        
+        // Add ordering to keep results consistent
+        query += ' ORDER BY last_name, first_name';
+        
+        // Execute the query using PostgreSQL's query method
+        const result = await db.pool.query(query, queryParams);
+        
+        // Render the page with both results and the search query
+        res.render('index', {
+            students: result.rows,
+            searchQuery: searchQuery  // Pass this to maintain the search box state
+        });
+    } catch (err) {
+        handleDatabaseError(err, res);
+    }
 });
 
 // Add new student
-router.post('/add', async (req, res) => {
-  try {
-    const { uid, name, semester, branch } = req.body;
-    await db.pool.query(
-      'INSERT INTO students (uid, name, semester, branch, status) VALUES ($1, $2, $3, $4, $5)',
-      [uid, name, semester, branch, 'active']
-    );
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
-});
-
-// Display edit student form
-router.get('/edit/:uid', async (req, res) => {
-  try {
-    const result = await db.pool.query('SELECT * FROM students WHERE uid = $1', [req.params.uid]);
-    if (result.rows.length > 0) {
-      res.render('edit', { student: result.rows[0] });
-    } else {
-      res.status(404).render('error', { error: 'Student not found' });
+router.post('/', async (req, res) => {
+    const { first_name, last_name, email, enrollment_date } = req.body;
+    
+    try {
+        const query = `
+            INSERT INTO students (first_name, last_name, email, enrollment_date)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        
+        await db.pool.query(query, [first_name, last_name, email, enrollment_date]);
+        res.redirect('/');
+    } catch (err) {
+        handleDatabaseError(err, res);
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
 });
 
 // Update student
-router.post('/edit/:uid', async (req, res) => {
-  try {
-    const { name, semester, branch, status } = req.body;
-    await db.pool.query(
-      'UPDATE students SET name = $1, semester = $2, branch = $3, status = $4 WHERE uid = $5',
-      [name, semester, branch, status, req.params.uid]
-    );
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
+router.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const { first_name, last_name, email, enrollment_date } = req.body;
+    
+    try {
+        const query = `
+            UPDATE students 
+            SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4
+            WHERE id = $5
+            RETURNING *
+        `;
+        
+        const result = await db.pool.query(query, [
+            first_name, last_name, email, enrollment_date, id
+        ]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', { 
+                error: 'Student not found' 
+            });
+        }
+        
+        res.redirect('/');
+    } catch (err) {
+        handleDatabaseError(err, res);
+    }
 });
 
 // Delete student
-router.get('/delete/:uid', async (req, res) => {
-  try {
-    await db.pool.query('DELETE FROM students WHERE uid = $1', [req.params.uid]);
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
-});
-
-// Toggle student status
-router.post('/toggle-status/:uid', async (req, res) => {
-  try {
-    await db.pool.query(`
-      UPDATE students 
-      SET status = CASE 
-        WHEN status = 'active' THEN 'inactive' 
-        ELSE 'active' 
-      END 
-      WHERE uid = $1
-    `, [req.params.uid]);
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    res.status(500).render('error', { error: err });
-  }
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const query = 'DELETE FROM students WHERE id = $1 RETURNING *';
+        const result = await db.pool.query(query, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', { 
+                error: 'Student not found' 
+            });
+        }
+        
+        res.redirect('/');
+    } catch (err) {
+        handleDatabaseError(err, res);
+    }
 });
 
 module.exports = router;
