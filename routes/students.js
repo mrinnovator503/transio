@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
         
         // Base query for all students
         let query = `
-            SELECT uid, name, semester, branch, status 
+            SELECT uid, first_name, last_name, email, enrollment_date, semester, branch, status 
             FROM students
         `;
         
@@ -28,13 +28,15 @@ router.get('/', async (req, res) => {
         if (searchQuery) {
             query += `
                 WHERE 
-                    LOWER(name) LIKE LOWER($1)
+                    LOWER(first_name) LIKE LOWER($1) OR
+                    LOWER(last_name) LIKE LOWER($1) OR
+                    LOWER(email) LIKE LOWER($1)
             `;
             queryParams.push(`%${searchQuery}%`);
         }
         
         // Add ordering to keep results consistent
-        query += ' ORDER BY name';
+        query += ' ORDER BY last_name, first_name';
         
         // Execute the query using PostgreSQL's query method
         const result = await db.pool.query(query, queryParams);
@@ -51,16 +53,16 @@ router.get('/', async (req, res) => {
 
 // Add new student
 router.post('/add', async (req, res) => {
-    const { name, semester, branch, status } = req.body;
+    const { first_name, last_name, email, enrollment_date, semester, branch, status } = req.body;
     
     try {
         const query = `
-            INSERT INTO students (name, semester, branch, status)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO students (first_name, last_name, email, enrollment_date, semester, branch, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
         
-        await db.pool.query(query, [name, semester, branch, status]);
+        await db.pool.query(query, [first_name, last_name, email, enrollment_date, semester, branch, status]);
         res.redirect('/');
     } catch (err) {
         handleDatabaseError(err, res);
@@ -70,18 +72,18 @@ router.post('/add', async (req, res) => {
 // Update student
 router.put('/:uid', async (req, res) => {
     const { uid } = req.params;
-    const { name, semester, branch, status } = req.body;
+    const { first_name, last_name, email, enrollment_date, semester, branch, status } = req.body;
     
     try {
         const query = `
             UPDATE students 
-            SET name = $1, semester = $2, branch = $3, status = $4
-            WHERE uid = $5
+            SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4, semester = $5, branch = $6, status = $7
+            WHERE uid = $8
             RETURNING *
         `;
         
         const result = await db.pool.query(query, [
-            name, semester, branch, status, uid
+            first_name, last_name, email, enrollment_date, semester, branch, status, uid
         ]);
         
         if (result.rows.length === 0) {
