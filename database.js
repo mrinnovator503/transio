@@ -11,6 +11,9 @@ const pool = new Pool({
 // Initialize database
 async function initDatabase() {
   try {
+    // Drop the students table if it exists
+    await pool.query('DROP TABLE IF EXISTS students');
+
     // Create the students table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS students (
