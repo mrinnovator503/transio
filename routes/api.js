@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const cors = require('cors');
 
 // Enable CORS for all API routes
 router.use(cors());
