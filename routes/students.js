@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
         
         // Base query for all students
         let query = `
-            SELECT id, first_name, last_name, email, enrollment_date 
+            SELECT uid, first_name, last_name, email, enrollment_date 
             FROM students
         `;
         
@@ -70,20 +70,20 @@ router.post('/', async (req, res) => {
 });
 
 // Update student
-router.put('/:id', async (req, res) => {
-    const { id } = req.params;
+router.put('/:uid', async (req, res) => {
+    const { uid } = req.params;
     const { first_name, last_name, email, enrollment_date } = req.body;
     
     try {
         const query = `
             UPDATE students 
             SET first_name = $1, last_name = $2, email = $3, enrollment_date = $4
-            WHERE id = $5
+            WHERE uid = $5
             RETURNING *
         `;
         
         const result = await db.pool.query(query, [
-            first_name, last_name, email, enrollment_date, id
+            first_name, last_name, email, enrollment_date, uid
         ]);
         
         if (result.rows.length === 0) {
@@ -99,12 +99,12 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete student
-router.delete('/:id', async (req, res) => {
-    const { id } = req.params;
+router.delete('/:uid', async (req, res) => {
+    const { uid } = req.params;
     
     try {
         const query = 'DELETE FROM students WHERE uid = $1 RETURNING *';
-        const result = await db.pool.query(query, [id]);
+        const result = await db.pool.query(query, [uid]);
         
         if (result.rows.length === 0) {
             return res.status(404).render('error', { 
